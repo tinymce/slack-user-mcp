@@ -1,0 +1,30 @@
+{
+  "name": "server-user-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for interacting with Slack as a user",
+  "license": "MIT",
+  "author": "Lars Hagen",
+  "homepage": "https://github.com/lars-hagen/slack-user-mcp",
+  "bugs": "https://github.com/lars-hagen/slack-user-mcp/issues",
+  "type": "module",
+  "bin": {
+    "slack-user-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc && shx chmod +x dist/*.js",
+    "prepare": "npm run build",
+    "watch": "tsc --watch",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "shx": "^0.3.4",
+    "typescript": "^5.6.2"
+  }
+}
