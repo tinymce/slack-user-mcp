@@ -1,10 +1,9 @@
 FROM node:22.12-alpine AS builder
 
-# Must be entire project because `prepare` script is run during `npm install` and requires all files.
-COPY src/slack /app
-COPY tsconfig.json /tsconfig.json
+# Copy necessary files for the build
+COPY package*.json tsconfig.json index.ts ./
 
-WORKDIR /app
+WORKDIR /
 
 RUN --mount=type=cache,target=/root/.npm npm install
 
@@ -12,9 +11,9 @@ RUN --mount=type=cache,target=/root/.npm-production npm ci --ignore-scripts --om
 
 FROM node:22-alpine AS release
 
-COPY --from=builder /app/dist /app/dist
-COPY --from=builder /app/package.json /app/package.json
-COPY --from=builder /app/package-lock.json /app/package-lock.json
+COPY --from=builder /dist /app/dist
+COPY --from=builder /package.json /app/package.json
+COPY --from=builder /package-lock.json /app/package-lock.json
 
 ENV NODE_ENV=production
 LABEL org.opencontainers.image.title="Slack User MCP Server"
