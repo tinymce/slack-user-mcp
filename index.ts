@@ -271,6 +271,32 @@ class SlackClient {
     this.isUserToken = token.startsWith('xoxp-');
   }
 
+  private convertTimestampsToISO(obj: any): any {
+    if (obj === null || obj === undefined) {
+      return obj;
+    }
+    
+    if (Array.isArray(obj)) {
+      return obj.map(item => this.convertTimestampsToISO(item));
+    }
+    
+    if (typeof obj === 'object') {
+      const converted = { ...obj };
+      for (const [key, value] of Object.entries(converted)) {
+        if ((key === 'ts' || key === 'thread_ts' || key === 'timestamp' || key.endsWith('_ts')) && 
+            typeof value === 'string' && /^\d+(\.\d+)?$/.test(value)) {
+          const timestamp = parseFloat(value);
+          converted[key] = new Date(timestamp * 1000).toISOString();
+        } else if (typeof value === 'object') {
+          converted[key] = this.convertTimestampsToISO(value);
+        }
+      }
+      return converted;
+    }
+    
+    return obj;
+  }
+
   async getChannels(limit: number = 100, cursor?: string): Promise<any> {
     const params = new URLSearchParams({
       types: "public_channel",
@@ -288,7 +314,8 @@ class SlackClient {
       { headers: this.headers },
     );
 
-    return response.json();
+    const data = await response.json();
+    return this.convertTimestampsToISO(data);
   }
 
   async postMessage(channel_id: string, text: string): Promise<any> {
@@ -302,7 +329,8 @@ class SlackClient {
       }),
     });
 
-    return response.json();
+    const data = await response.json();
+    return this.convertTimestampsToISO(data);
   }
 
   async postReply(
@@ -321,7 +349,8 @@ class SlackClient {
       }),
     });
 
-    return response.json();
+    const data = await response.json();
+    return this.convertTimestampsToISO(data);
   }
 
   async addReaction(
@@ -339,7 +368,8 @@ class SlackClient {
       }),
     });
 
-    return response.json();
+    const data = await response.json();
+    return this.convertTimestampsToISO(data);
   }
 
   async getChannelHistory(
@@ -356,7 +386,8 @@ class SlackClient {
       { headers: this.headers },
     );
 
-    return response.json();
+    const data = await response.json();
+    return this.convertTimestampsToISO(data);
   }
 
   async getThreadReplies(channel_id: string, thread_ts: string): Promise<any> {
@@ -370,7 +401,8 @@ class SlackClient {
       { headers: this.headers },
     );
 
-    return response.json();
+    const data = await response.json();
+    return this.convertTimestampsToISO(data);
   }
 
   async getUsers(limit: number = 100, cursor?: string): Promise<any> {
@@ -387,7 +419,8 @@ class SlackClient {
       headers: this.headers,
     });
 
-    return response.json();
+    const data = await response.json();
+    return this.convertTimestampsToISO(data);
   }
 
   async getUserProfile(user_id: string): Promise<any> {
@@ -401,7 +434,8 @@ class SlackClient {
       { headers: this.headers },
     );
 
-    return response.json();
+    const data = await response.json();
+    return this.convertTimestampsToISO(data);
   }
 
   async searchMessages(
@@ -428,7 +462,8 @@ class SlackClient {
       { headers: this.headers },
     );
 
-    return response.json();
+    const data = await response.json();
+    return this.convertTimestampsToISO(data);
   }
 }
 
