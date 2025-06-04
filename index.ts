@@ -167,7 +167,7 @@ const getChannelHistoryTool: Tool = {
 
 const getThreadRepliesTool: Tool = {
   name: "slack_get_thread_replies",
-  description: "Get all replies in a message thread",
+  description: "Get a message and all replies in the message thread",
   inputSchema: {
     type: "object",
     properties: {
