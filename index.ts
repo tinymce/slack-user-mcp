@@ -7,6 +7,7 @@ import {
   ListToolsRequestSchema,
   Tool,
 } from "@modelcontextprotocol/sdk/types.js";
+import pMemoize from "p-memoize";
 
 // Type definitions for tool arguments
 interface ListChannelsArgs {
@@ -262,6 +263,7 @@ const searchMessagesTool: Tool = {
 class SlackClient {
   private headers: { Authorization: string; "Content-Type": string };
   private isUserToken: boolean;
+  private memoizedGetUser: (userId: string) => Promise<{displayName: string, username: string}>;
 
   constructor(token: string) {
     this.headers = {
@@ -269,6 +271,27 @@ class SlackClient {
       "Content-Type": "application/json",
     };
     this.isUserToken = token.startsWith('xoxp-');
+    
+    // Memoize user lookups to avoid repeated API calls
+    this.memoizedGetUser = pMemoize(async (userId: string): Promise<{displayName: string, username: string}> => {
+      try {
+        const response = await fetch(`https://slack.com/api/users.info?user=${userId}`, {
+          headers: this.headers,
+        });
+        const data = await response.json();
+        
+        if (data.ok && data.user) {
+          return {
+            displayName: data.user.profile?.display_name || data.user.real_name || data.user.name || userId,
+            username: data.user.name || userId
+          };
+        }
+        return { displayName: userId, username: userId };
+      } catch (error) {
+        console.error(`Failed to resolve user ${userId}:`, error);
+        return { displayName: userId, username: userId };
+      }
+    });
   }
 
   private convertTimestampsToISO(obj: any): any {
@@ -295,6 +318,35 @@ class SlackClient {
     }
     
     return obj;
+  }
+
+  private async enrichWithUserInfo(obj: any): Promise<any> {
+    if (!obj || typeof obj !== 'object') {
+      return obj;
+    }
+
+    if (Array.isArray(obj)) {
+      return Promise.all(obj.map(item => this.enrichWithUserInfo(item)));
+    }
+
+    const enriched = { ...obj };
+
+    // Add user info fields if we have a user ID but missing readable names
+    if (enriched.user && typeof enriched.user === 'string' && 
+        enriched.user.match(/^U[A-Z0-9]+$/) && !enriched.user_display_name) {
+      const userInfo = await this.memoizedGetUser(enriched.user);
+      enriched.user_display_name = userInfo.displayName;
+      enriched.user_username = userInfo.username;
+    }
+
+    // Recursively process nested objects
+    for (const [key, value] of Object.entries(enriched)) {
+      if (typeof value === 'object') {
+        enriched[key] = await this.enrichWithUserInfo(value);
+      }
+    }
+
+    return enriched;
   }
 
   async getChannels(limit: number = 100, cursor?: string): Promise<any> {
@@ -387,7 +439,7 @@ class SlackClient {
     );
 
     const data = await response.json();
-    return this.convertTimestampsToISO(data);
+    return this.enrichWithUserInfo(this.convertTimestampsToISO(data));
   }
 
   async getThreadReplies(channel_id: string, thread_ts: string): Promise<any> {
@@ -402,7 +454,7 @@ class SlackClient {
     );
 
     const data = await response.json();
-    return this.convertTimestampsToISO(data);
+    return this.enrichWithUserInfo(this.convertTimestampsToISO(data));
   }
 
   async getUsers(limit: number = 100, cursor?: string): Promise<any> {
@@ -463,7 +515,7 @@ class SlackClient {
     );
 
     const data = await response.json();
-    return this.convertTimestampsToISO(data);
+    return this.enrichWithUserInfo(this.convertTimestampsToISO(data));
   }
 }
 
