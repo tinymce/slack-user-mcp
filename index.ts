@@ -238,7 +238,7 @@ const searchMessagesTool: Tool = {
       },
       cursor: {
         type: "string",
-        description: "Pagination cursor for next page of results",
+        description: "Pagination cursor for next page of results. Start with '*' for first call, then use messages.pagination.next_cursor from the response for subsequent calls. When next_cursor is absent, no more results.",
       },
       highlight: {
         type: "boolean",
