@@ -40,6 +40,8 @@ interface GetChannelHistoryArgs {
 interface GetThreadRepliesArgs {
   channel_id: string;
   thread_ts: string;
+  limit?: number;
+  cursor?: string;
 }
 
 interface GetUsersArgs {
@@ -179,6 +181,15 @@ const getThreadRepliesTool: Tool = {
       thread_ts: {
         type: "string",
         description: "The timestamp of the parent message in the format '1234567890.123456'. Timestamps in the format without the period can be converted by adding the period such that 6 numbers come after it.",
+      },
+      limit: {
+        type: "number",
+        description: "Maximum number of messages to return (default 100, max 1000)",
+        default: 100,
+      },
+      cursor: {
+        type: "string",
+        description: "Pagination cursor for next page of results. Use response_metadata.next_cursor from previous call.",
       },
     },
     required: ["channel_id", "thread_ts"],
@@ -442,11 +453,23 @@ class SlackClient {
     return this.enrichWithUserInfo(this.convertTimestampsToISO(data));
   }
 
-  async getThreadReplies(channel_id: string, thread_ts: string): Promise<any> {
+  async getThreadReplies(
+    channel_id: string,
+    thread_ts: string,
+    limit?: number,
+    cursor?: string,
+  ): Promise<any> {
     const params = new URLSearchParams({
       channel: channel_id,
       ts: thread_ts,
     });
+
+    if (limit !== undefined) {
+      params.append("limit", Math.min(limit, 1000).toString());
+    }
+    if (cursor) {
+      params.append("cursor", cursor);
+    }
 
     const response = await fetch(
       `https://slack.com/api/conversations.replies?${params}`,
@@ -644,6 +667,8 @@ async function main() {
             const response = await slackClient.getThreadReplies(
               args.channel_id,
               args.thread_ts,
+              args.limit,
+              args.cursor,
             );
             return {
               content: [{ type: "text", text: JSON.stringify(response) }],
