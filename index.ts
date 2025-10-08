@@ -249,7 +249,7 @@ const searchMessagesTool: Tool = {
       },
       cursor: {
         type: "string",
-        description: "Pagination cursor for next page of results. Start with '*' for first call, then use messages.pagination.next_cursor from the response for subsequent calls. When next_cursor is absent, no more results.",
+        description: "Pagination cursor for next page of results. Use the value from messages.pagination.next_cursor in the previous response. When next_cursor is absent from the response, there are no more results.",
       },
       highlight: {
         type: "boolean",
@@ -527,7 +527,12 @@ class SlackClient {
       team_id: process.env.SLACK_TEAM_ID!,
     });
 
-    if (cursor) params.append("cursor", cursor);
+    // Default to "*" for cursor-based pagination if no cursor provided
+    if (cursor !== undefined) {
+      params.append("cursor", cursor);
+    } else {
+      params.append("cursor", "*");
+    }
     if (highlight) params.append("highlight", "true");
     if (sort) params.append("sort", sort);
     if (sort_dir) params.append("sort_dir", sort_dir);
